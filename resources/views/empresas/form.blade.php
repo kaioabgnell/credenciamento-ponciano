@@ -22,6 +22,10 @@
 </div>
 @endif
 
+@php
+  $telEmpDigitos = preg_replace('/\D/', '', old('telefone', $empresa->telefone ?? ''));
+@endphp
+
 <form method="POST"
       action="{{ $modo === 'criar' ? route('empresas.store') : route('empresas.update', $empresa) }}">
   @csrf
@@ -52,9 +56,9 @@
 
       <div class="form-group">
         <label class="form-label" for="telefone">Telefone</label>
-        <input type="text" id="telefone" name="telefone"
+        <input type="text" id="campo-telefone-empresa" name="telefone"
                class="form-control" data-mask="tel"
-               value="{{ old('telefone', $empresa->telefone) }}"
+               data-prefill="{{ $telEmpDigitos }}"
                placeholder="(00) 00000-0000">
       </div>
 
@@ -86,3 +90,14 @@
 </form>
 
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+  const telDigits = String($('#campo-telefone-empresa').data('prefill') || '');
+  if (telDigits.length >= 10) {
+    $('#campo-telefone-empresa').unmask().val(telDigits).mask('(00) 00000-0000');
+  }
+});
+</script>
+@endpush
