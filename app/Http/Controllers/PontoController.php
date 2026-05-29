@@ -116,7 +116,7 @@ class PontoController extends Controller
             $horarioExibir = now()->format('H:i');
         }
 
-        Ponto::create([
+        $pontoNovo = Ponto::create([
             'funcionario_id' => $funcionario->id,
             'empresa_id'     => $funcionario->empresa_id,
             'evento_id'      => $request->input('evento_id'),
@@ -133,6 +133,7 @@ class PontoController extends Controller
 
         return response()->json([
             'sucesso'      => true,
+            'ponto_id'     => $pontoNovo->id,
             'mensagem'     => "Entrada registrada para {$funcionario->nome}",
             'horario'      => $horarioExibir,
             'evento_nome'  => $eventoNome,

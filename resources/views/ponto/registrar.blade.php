@@ -394,7 +394,7 @@ function atualizarStatusFunc(id) {
     $('#func-status').html('<span class="badge badge-presente">● Presente</span>');
     $('#btn-entrada').addClass('hidden');
     $('#btn-entrada-manual-toggle').addClass('hidden');
-    $('#btn-saida').removeClass('hidden').attr('data-ponto-id', pontoId);
+    $('#btn-saida').removeClass('hidden').data('ponto-id', pontoId);
   } else {
     $('#func-status').html('<span class="badge badge-ausente">— Ausente / Sem entrada</span>');
     $('#btn-entrada').removeClass('hidden');
@@ -439,7 +439,7 @@ window.baterEntrada = function () {
       $('#func-status').html('<span class="badge badge-presente">● Presente</span>');
       $('#btn-entrada').addClass('hidden');
       $('#btn-entrada-manual-toggle').addClass('hidden');
-      $('#btn-saida').removeClass('hidden');
+      $('#btn-saida').removeClass('hidden').data('ponto-id', res.ponto_id);
       $('#painel-entrada-manual').hide();
       const atual = parseInt($('#contador-presentes').text()) || 0;
       $('#contador-presentes').text(atual + 1);
@@ -477,7 +477,7 @@ window.baterEntradaManual = function () {
       $('#func-status').html('<span class="badge badge-presente">● Presente</span>');
       $('#btn-entrada').addClass('hidden');
       $('#btn-entrada-manual-toggle').addClass('hidden');
-      $('#btn-saida').removeClass('hidden');
+      $('#btn-saida').removeClass('hidden').data('ponto-id', res.ponto_id);
       $('#painel-entrada-manual').hide();
       const atual = parseInt($('#contador-presentes').text()) || 0;
       $('#contador-presentes').text(atual + 1);

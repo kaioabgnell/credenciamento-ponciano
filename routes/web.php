@@ -11,28 +11,63 @@ use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Middleware\SetEventoAtivo;
 
+// ── Diagnóstico e criação do symlink ────────────────────────────
 Route::get('/fix-storage-link', function () {
-    $target = storage_path('app/public');              // /home1/dan05629/storage/app/public
-    $link   = '/home1/dan05629/public_html/storage';   // raiz web do Hostgator
+    $target = storage_path('app/public');
+    $link   = public_path('storage');   // usa public_path para evitar path hardcoded
 
-    // Remove qualquer symlink ou pasta errada
+    $info = [
+        'target_path'    => $target,
+        'target_exists'  => file_exists($target),
+        'link_path'      => $link,
+        'link_is_link'   => is_link($link),
+        'link_is_dir'    => is_dir($link),
+        'link_is_file'   => is_file($link),
+        'symlink_func'   => function_exists('symlink') ? 'disponível' : 'DESABILITADA',
+    ];
+
+    // Remove qualquer symlink ou pasta vazia errada
     if (is_link($link)) {
         unlink($link);
+        $info['removeu'] = 'symlink antigo removido';
     } elseif (is_dir($link)) {
-        rmdir($link); // só funciona se estiver vazia
+        @rmdir($link);
+        $info['removeu'] = 'diretório vazio removido (se estava vazio)';
     }
 
-    if (symlink($target, $link)) {
-        return [
-            'status'  => '✅ Symlink criado com sucesso!',
-            'target'  => $target,
-            'link'    => $link,
-            'testUrl' => 'https://poncianoproductions.com.br/storage/uploads/',
-        ];
+    if (!function_exists('symlink')) {
+        $info['status'] = '❌ symlink() desabilitado neste servidor — use a rota /storage/{path} como fallback (já ativa)';
+        return response()->json($info);
     }
 
-    return ['status' => '❌ Falhou ao criar symlink'];
+    if (@symlink($target, $link)) {
+        $info['status']  = '✅ Symlink criado com sucesso!';
+        $info['testUrl'] = url('storage/uploads/');
+    } else {
+        $info['status'] = '❌ symlink() falhou — use a rota /storage/{path} como fallback (já ativa)';
+    }
+
+    return response()->json($info);
 });
+
+// ── Fallback: serve arquivos de storage diretamente via PHP ──────
+// Funciona mesmo sem symlink. O .htaccess já redireciona para
+// index.php quando o arquivo físico não existe em public/storage,
+// então esta rota é alcançada automaticamente como fallback.
+Route::get('storage/{path}', function (string $path) {
+    $file = storage_path('app/public/' . $path);
+
+    if (!file_exists($file) || !is_file($file)) {
+        abort(404);
+    }
+
+    $mime = mime_content_type($file) ?: 'application/octet-stream';
+
+    return response()->file($file, [
+        'Content-Type'  => $mime,
+        'Cache-Control' => 'public, max-age=86400',
+    ]);
+})->where('path', '.*');
 
 // ── AUTENTICAÇÃO ─────────────────────────────────────────────────
 Route::get('/',       [LoginController::class, 'showLoginForm'])->name('login');
