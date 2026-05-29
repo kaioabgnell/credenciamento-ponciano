@@ -73,11 +73,15 @@
               </div>
             </div>
           </td>
-          <td>
-            <a href="{{ route('empresas.show', $func->empresa) }}"
-               style="color:var(--azul-primario); font-weight:500; font-size:13px">
-              {{ $func->empresa->nome }}
-            </a>
+          <td style="font-size:13px">
+            @if($func->empresa)
+              <a href="{{ route('empresas.show', $func->empresa) }}"
+                 style="color:var(--azul-primario); font-weight:500">
+                {{ $func->empresa->nome }}
+              </a>
+            @else
+              <span style="color:var(--cinza-400)">Sem empresa</span>
+            @endif
           </td>
           <td>{{ $func->funcao_cargo }}</td>
           <td>

@@ -13,23 +13,37 @@ class ImportarPlanilha extends Command
 {
     protected $signature   = 'importar:planilha
                                 {--arquivo= : Caminho para o arquivo .xlsx}
-                                {--evento-id=1 : ID do evento a vincular nos pontos}';
+                                {--evento-id=1 : ID do evento a vincular nos pontos}
+                                {--fresh : Apaga pontos, funcionários e empresas antes de importar}';
 
     protected $description = 'Importa empresas, funcionários e pontos da planilha TOTUS TUUS 2026';
 
-    private array $log = ['empresas' => 0, 'funcionarios' => 0, 'pontos' => 0, 'erros' => []];
+    private array $log  = ['empresas' => 0, 'funcionarios' => 0, 'pontos' => 0, 'erros' => []];
+    private bool  $fresh = false;
 
     // ──────────────────────────────────────────────────────────────
     public function handle(): int
     {
-        $arquivo  = $this->option('arquivo') ?: base_path('storage/importacao/planilha.xlsx');
-        $eventoId = (int) $this->option('evento-id');
+        $arquivo       = $this->option('arquivo') ?: base_path('storage/importacao/planilha.xlsx');
+        $eventoId      = (int) $this->option('evento-id');
+        $this->fresh   = (bool) $this->option('fresh');
 
         if (! file_exists($arquivo)) {
             $this->error("Arquivo não encontrado: {$arquivo}");
             $this->line("Coloque o arquivo em: storage/importacao/planilha.xlsx");
             $this->line("Ou use: php artisan importar:planilha --arquivo=/caminho/planilha.xlsx");
             return 1;
+        }
+
+        // ── Modo fresh: limpa dados antes de importar ─────────────
+        if ($this->fresh) {
+            $this->warn('🗑  Modo --fresh: limpando pontos, funcionários e empresas...');
+            \DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            Ponto::truncate();
+            Funcionario::truncate();
+            Empresa::truncate();
+            \DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            $this->info('✓ Dados limpos.');
         }
 
         $this->info("📂 Lendo arquivo: {$arquivo}");
@@ -142,13 +156,13 @@ class ImportarPlanilha extends Command
             }
 
             // C = nome do funcionário  (obrigatório)
-            $nome = trim((string) ($data[2] ?? ''));
+            $nome = $this->limparTexto((string) ($data[2] ?? ''));
             if (! $nome) {
                 continue;
             }
 
             // B = nome da empresa  (opcional — pode ser vazio)
-            $nomeEmpresa = trim((string) ($data[1] ?? ''));
+            $nomeEmpresa = $this->limparTexto((string) ($data[1] ?? ''));
             $empresa     = null;
 
             if ($nomeEmpresa) {
@@ -160,25 +174,36 @@ class ImportarPlanilha extends Command
                 }
             }
 
+            // E = Coordenador? — SIM → 1, qualquer outro valor → 0
+            $coordRaw    = strtoupper($this->limparTexto((string) ($data[4] ?? '')));
+            $coordenador = ($coordRaw === 'SIM') ? 1 : 0;
+
             // F = CPF (pode vir como float no Excel)
             $cpf = $this->limparCpf($data[5] ?? '');
 
             // G = Telefone (pode vir como float)
             $telefone = $this->limparTelefone($data[6] ?? '');
 
+            $campos = [
+                'empresa_id'   => $empresa?->id,
+                'funcao_cargo' => $this->limpar($data[3] ?? '') ?: 'Não informado',
+                'coordenador'  => $coordenador,
+                'cpf'          => $cpf,
+                'telefone'     => $telefone,
+                'area_acesso'  => strtoupper($this->limparTexto((string) ($data[7] ?? 'TODOS'))) ?: 'TODOS',
+                'ativo'        => true,
+            ];
+
             try {
-                Funcionario::updateOrCreate(
-                    ['nome' => $nome, 'empresa_id' => $empresa?->id],
-                    [
-                        'empresa_id'   => $empresa?->id,
-                        'funcao_cargo' => $this->limpar($data[3] ?? '') ?: 'Não informado',
-                        'coordenador'  => strtoupper(trim((string) ($data[4] ?? ''))) === 'SIM',
-                        'cpf'          => $cpf,
-                        'telefone'     => $telefone,
-                        'area_acesso'  => strtoupper(trim((string) ($data[7] ?? 'TODOS'))) ?: 'TODOS',
-                        'ativo'        => true,
-                    ]
-                );
+                if ($this->fresh) {
+                    // Modo fresh: sempre cria um novo registro
+                    Funcionario::create(array_merge(['nome' => $nome], $campos));
+                } else {
+                    Funcionario::updateOrCreate(
+                        ['nome' => $nome, 'empresa_id' => $empresa?->id],
+                        $campos
+                    );
+                }
                 $this->log['funcionarios']++;
             } catch (\Exception $e) {
                 $this->log['erros'][] = "Funcionário '{$nome}': " . $e->getMessage();
@@ -262,9 +287,7 @@ class ImportarPlanilha extends Command
             $dataPonto = $this->parsarData($dataRaw, $dataFmt);
 
             if (! $dataPonto) {
-                $this->log['erros'][] = "Data inválida para '{$nome}': '{$dataFmt}'";
-                $bar->advance();
-                continue;
+                $this->log['erros'][] = "Data inválida para '{$nome}': '{$dataFmt}' — importado com data NULL";
             }
 
             // ── ENTRADA (coluna H = índice 7) ─────────────────────
@@ -287,20 +310,30 @@ class ImportarPlanilha extends Command
             }
 
             try {
-                Ponto::updateOrCreate(
-                    ['funcionario_id' => $funcionario->id, 'data' => $dataPonto],
-                    [
-                        'empresa_id'        => $funcionario->empresa_id,
-                        'evento_id'         => $eventoId,
-                        'entrada'           => $entrada,
-                        'saida'             => $saida,
-                        'horas_trabalhadas' => $horas,
-                        'status'            => $status,
-                    ]
-                );
+                $pontoData = [
+                    'empresa_id'        => $funcionario->empresa_id,
+                    'evento_id'         => $eventoId,
+                    'entrada'           => $entrada,
+                    'saida'             => $saida,
+                    'horas_trabalhadas' => $horas,
+                    'status'            => $status,
+                ];
+
+                if ($dataPonto) {
+                    Ponto::updateOrCreate(
+                        ['funcionario_id' => $funcionario->id, 'data' => $dataPonto],
+                        $pontoData
+                    );
+                } else {
+                    Ponto::create(array_merge($pontoData, [
+                        'funcionario_id' => $funcionario->id,
+                        'data'           => null,
+                    ]));
+                }
+
                 $this->log['pontos']++;
             } catch (\Exception $e) {
-                $this->log['erros'][] = "Ponto '{$nome}' em {$dataPonto}: " . $e->getMessage();
+                $this->log['erros'][] = "Ponto '{$nome}' em " . ($dataPonto ?? 'NULL') . ': ' . $e->getMessage();
             }
 
             $bar->advance();
@@ -375,7 +408,7 @@ class ImportarPlanilha extends Command
         mixed   $valor,
         ?string $entrada,
         ?string $saida,
-        string  $dataPonto
+        ?string $dataPonto
     ): ?string {
         $v = trim($formatado);
 
@@ -406,31 +439,30 @@ class ImportarPlanilha extends Command
         return null;
     }
 
-    /** Limpa CPF — lida com floats do Excel (sem zeros à esquerda) */
+    /** Limpa CPF — salva apenas dígitos, sem formatação */
     private function limparCpf(mixed $valor): ?string
     {
         if ($valor === null || $valor === '') {
             return null;
         }
 
-        // Remove qualquer não-dígito (pontos, traços) e reconstrói
-        $numeros = preg_replace('/\D/', '', (string) $valor);
+        // Float do Excel (perde zeros à esquerda): converte para int string primeiro
+        $str = is_numeric($valor) ? (string) (int) floatval($valor) : (string) $valor;
 
-        // Reconstrói a partir de float (Excel perde zeros à esquerda)
-        if (! $numeros && is_numeric($valor)) {
-            $numeros = (string) (int) floatval($valor);
-        }
+        // Remove tudo que não for dígito
+        $numeros = preg_replace('/\D/', '', $str);
 
         if (! $numeros) {
             return null;
         }
 
-        // Padeia para 11 dígitos se necessário (zeros à esquerda perdidos)
+        // Padeia com zeros à esquerda se necessário (Excel float remove zeros)
         if (strlen($numeros) < 11) {
             $numeros = str_pad($numeros, 11, '0', STR_PAD_LEFT);
         }
 
-        return strlen($numeros) === 11 ? $numeros : null;
+        // Trunca se tiver mais que 11 (improvável, mas seguro)
+        return substr($numeros, 0, 11);
     }
 
     /** Limpa telefone — lida com floats do Excel */
@@ -456,10 +488,23 @@ class ImportarPlanilha extends Command
         return $str;
     }
 
+    /**
+     * Garante UTF-8 válido, remove caracteres de controle e trim.
+     * Preserva acentos, apóstrofos e demais caracteres especiais legítimos.
+     */
+    private function limparTexto(string $valor): string
+    {
+        // Força codificação UTF-8 válida
+        $v = mb_convert_encoding($valor, 'UTF-8', 'UTF-8');
+        // Remove caracteres de controle (exceto espaço normal)
+        $v = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $v);
+        return trim($v);
+    }
+
     private function limpar(mixed $valor): ?string
     {
-        $v = trim((string) ($valor ?? ''));
-        return in_array($v, ['-', '', 'nan', '-']) ? null : $v;
+        $v = $this->limparTexto((string) ($valor ?? ''));
+        return in_array($v, ['-', '', 'nan']) ? null : $v;
     }
 
     private function limparEmail(mixed $valor): ?string

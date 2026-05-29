@@ -180,7 +180,7 @@
         <span style="position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; color:var(--cinza-400); pointer-events:none">🔍</span>
         <input type="text" id="busca-sem-saida"
                class="form-control"
-               placeholder="Pesquisar por nome ou empresa..."
+               placeholder="Pesquisar por nome, empresa ou data (ex: 28/05)..."
                style="padding-left:34px; font-size:12.5px; height:34px"
                autocomplete="off">
       </div>
@@ -195,7 +195,8 @@
              data-ponto-id="{{ $ponto->id }}"
              data-func-id="{{ $ponto->funcionario_id }}"
              data-nome="{{ strtolower($ponto->funcionario->nome) }}"
-             data-empresa="{{ strtolower($ponto->empresa->nome) }}">
+             data-empresa="{{ strtolower($ponto->empresa?->nome ?? 'sem empresa') }}"
+             data-data="{{ $ponto->data?->format('d/m') ?? '' }}">
           <img src="{{ $ponto->funcionario->foto_url }}"
                style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--amarelo); flex-shrink:0; margin-right:12px">
           <div style="flex:1; overflow:hidden">
@@ -203,8 +204,8 @@
               {{ $ponto->funcionario->nome }}
             </div>
             <div style="font-size:11px; color:var(--cinza-500)">
-              Entrada: <span class="mono" style="font-weight:600; color:#92610a">{{ $ponto->data->format('d/m') }} {{ substr($ponto->entrada, 0, 5) }}</span>
-              · {{ $ponto->empresa->nome }}
+              Entrada: <span class="mono" style="font-weight:600; color:#92610a">{{ $ponto->data?->format('d/m') ?? '—' }} {{ substr($ponto->entrada ?? '', 0, 5) }}</span>
+              · {{ $ponto->empresa?->nome ?? 'Sem empresa vinculada' }}
             </div>
             @if($ponto->evento)
             <span style="display:inline-flex;align-items:center;gap:4px;background:var(--roxo-light,#ede9fe);color:var(--roxo);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:600;margin-top:3px">
@@ -258,7 +259,7 @@
            data-ponto-id="{{ $ponto->id }}"
            data-func-id="{{ $ponto->funcionario_id }}"
            data-nome="{{ strtolower($ponto->funcionario->nome) }}"
-           data-empresa="{{ strtolower($ponto->empresa->nome) }}">
+           data-empresa="{{ strtolower($ponto->empresa?->nome ?? 'sem empresa') }}">
         <img src="{{ $ponto->funcionario->foto_url }}"
              style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--verde); flex-shrink:0; margin-right: 12px;">
         <div style="flex:1; overflow:hidden">
@@ -266,8 +267,8 @@
             {{ $ponto->funcionario->nome }}
           </div>
           <div style="font-size:11px; color:var(--cinza-500)">
-            Entrada: <span class="mono" style="font-weight:600; color:var(--verde)">{{ substr($ponto->entrada, 0, 5) }}</span>
-            · {{ $ponto->empresa->nome }}
+            Entrada: <span class="mono" style="font-weight:600; color:var(--verde)">{{ substr($ponto->entrada ?? '', 0, 5) }}</span>
+            · {{ $ponto->empresa?->nome ?? 'Sem empresa' }}
           </div>
           @if($ponto->evento)
           <div style="margin-top:3px">
@@ -685,7 +686,10 @@ function filtrarSemSaida(termo) {
   const q = (termo || '').trim().toLowerCase();
   let visiveis = 0;
   $('.sem-saida-item').each(function () {
-    const bate = !q || ($(this).data('nome') || '').includes(q) || ($(this).data('empresa') || '').includes(q);
+    const bate = !q
+      || ($(this).data('nome')    || '').includes(q)
+      || ($(this).data('empresa') || '').includes(q)
+      || ($(this).data('data')    || '').includes(q);
     $(this).toggle(bate);
     if (bate) visiveis++;
   });

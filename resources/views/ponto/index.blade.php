@@ -100,10 +100,16 @@
                  style="font-weight:600; color:var(--cinza-800)">{{ $ponto->funcionario->nome }}</a>
             </div>
           </td>
-          <td style="font-size:13px">{{ $ponto->empresa->nome }}</td>
+          <td style="font-size:13px">{{ $ponto->empresa?->nome ?? 'Sem empresa' }}</td>
           <td style="font-size:13px; color:var(--cinza-600)">{{ $ponto->funcionario->funcao_cargo }}</td>
-          <td>{{ $ponto->funcionario->coordenador ? '<span class="badge badge-coordenador">⭐</span>' : '—' }}</td>
-          <td class="mono td-data" style="font-size:12.5px">{{ $ponto->data->format('d/m/Y') }}</td>
+          <td>
+            @if($ponto->funcionario->coordenador)
+              <span style="background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; padding:2px 10px; border-radius:20px; font-size:11.5px; font-weight:700; white-space:nowrap">⭐ Sim</span>
+            @else
+              <span style="background:#fff7ed; color:#c2410c; border:1px solid #fdba74; padding:2px 10px; border-radius:20px; font-size:11.5px; font-weight:600; white-space:nowrap">Não</span>
+            @endif
+          </td>
+          <td class="mono td-data" style="font-size:12.5px">{{ $ponto->data?->format('d/m/Y') ?? '—' }}</td>
           <td class="mono td-entrada" style="color:var(--verde); font-weight:600">
             {{ $ponto->entrada ? substr($ponto->entrada, 0, 5) : '—' }}
           </td>
@@ -116,7 +122,7 @@
           <td class="td-status">{!! $ponto->status_badge !!}</td>
           <td style="text-align:center; white-space:nowrap">
             <button class="btn-icon" title="Editar"
-                    onclick="abrirModalEditar({{ $ponto->id }}, '{{ $ponto->data->format('Y-m-d') }}', '{{ substr($ponto->entrada ?? '', 0, 5) }}', '{{ substr($ponto->saida ?? '', 0, 5) }}')"
+                    onclick="abrirModalEditar({{ $ponto->id }}, '{{ $ponto->data?->format('Y-m-d') ?? '' }}', '{{ substr($ponto->entrada ?? '', 0, 5) }}', '{{ substr($ponto->saida ?? '', 0, 5) }}')"
                     style="width:30px; height:30px; margin-right:4px">
               ✏️
             </button>
