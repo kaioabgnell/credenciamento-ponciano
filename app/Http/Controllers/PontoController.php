@@ -53,17 +53,27 @@ class PontoController extends Controller
     public function registrar()
     {
         $eventoAtivoId = session('evento_ativo_id');
+        $limite24h     = now()->subHours(24)->format('Y-m-d H:i:s');
 
-        // Presentes filtrados pelo evento da sessão
-        $query = Ponto::with(['funcionario.empresa', 'evento'])->hoje()->presentes();
-        if ($eventoAtivoId) {
-            $query->where('evento_id', $eventoAtivoId);
-        }
-        $presentes = $query->orderBy('entrada')->get();
+        $base = Ponto::with(['funcionario.empresa', 'evento'])
+            ->where('status', 'presente')
+            ->when($eventoAtivoId, fn($q) => $q->where('evento_id', $eventoAtivoId));
+
+        // Presentes nas últimas 24 horas
+        $presentes = (clone $base)
+            ->whereRaw("CONCAT(data, ' ', entrada) >= ?", [$limite24h])
+            ->orderByRaw("CONCAT(data, ' ', entrada) DESC")
+            ->get();
+
+        // Registros sem saída anteriores às últimas 24 horas
+        $semSaida = (clone $base)
+            ->whereRaw("CONCAT(data, ' ', entrada) < ?", [$limite24h])
+            ->orderByRaw("CONCAT(data, ' ', entrada) DESC")
+            ->get();
 
         $eventoAtivo = $eventoAtivoId ? Evento::find($eventoAtivoId) : null;
 
-        return view('ponto.registrar', compact('presentes', 'eventoAtivo'));
+        return view('ponto.registrar', compact('presentes', 'semSaida', 'eventoAtivo'));
     }
 
     public function entrada(Request $request)
@@ -137,21 +147,48 @@ class PontoController extends Controller
 
     public function saida(Request $request)
     {
-        $request->validate(['ponto_id' => 'required|exists:pontos,id']);
+        $request->validate([
+            'ponto_id'     => 'required|exists:pontos,id',
+            'saida_manual' => 'nullable|date_format:H:i',
+            'data_saida'   => 'nullable|string',
+        ]);
 
         $ponto = Ponto::with('funcionario')->findOrFail($request->ponto_id);
 
         if ($ponto->status !== 'presente')
             return response()->json(['erro' => 'Ponto não está como "presente".'], 422);
 
-        $ponto->saida = now()->format('H:i:s');
-        $ponto->save();
-        $ponto->calcularHoras();
+        if ($request->filled('saida_manual')) {
+            $horaSaida    = $request->saida_manual . ':00';
+            $dataSaidaStr = $ponto->data->format('Y-m-d');
+
+            if ($request->filled('data_saida')) {
+                try {
+                    $dataSaidaStr = Carbon::createFromFormat('d/m/Y', $request->data_saida)->format('Y-m-d');
+                } catch (\Exception $e) {}
+            }
+
+            $dtEntrada = Carbon::parse($ponto->data->format('Y-m-d') . ' ' . $ponto->entrada);
+            $dtSaida   = Carbon::parse($dataSaidaStr . ' ' . $horaSaida);
+
+            if ($dtSaida <= $dtEntrada) {
+                return response()->json(['erro' => 'O horário de saída deve ser posterior ao horário de entrada.'], 422);
+            }
+
+            $ponto->saida            = $horaSaida;
+            $ponto->horas_trabalhadas = gmdate('H:i:s', $dtSaida->diffInSeconds($dtEntrada));
+            $ponto->status           = 'finalizado';
+            $ponto->save();
+        } else {
+            $ponto->saida = now()->format('H:i:s');
+            $ponto->save();
+            $ponto->calcularHoras();
+        }
 
         return response()->json([
             'sucesso'  => true,
             'mensagem' => "Saída registrada para {$ponto->funcionario->nome}",
-            'horario'  => now()->format('H:i'),
+            'horario'  => substr($ponto->saida, 0, 5),
             'horas'    => $ponto->horas_trabalhadas,
         ]);
     }

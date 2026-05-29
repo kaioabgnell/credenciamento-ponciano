@@ -1198,6 +1198,7 @@ tbody td {
 .mb-8          { margin-bottom: 8px; }
 .mb-16         { margin-bottom: 16px; }
 .mb-24         { margin-bottom: 24px; }
+.mt-20         { margin-top: 20px; }
 .p-0           { padding: 0; }
 .hidden        { display: none; }
 .mono          { font-family: var(--font-mono); }
