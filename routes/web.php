@@ -11,6 +11,29 @@ use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Middleware\SetEventoAtivo;
 
+Route::get('/fix-storage-link', function () {
+    $target = storage_path('app/public');              // /home1/dan05629/storage/app/public
+    $link   = '/home1/dan05629/public_html/storage';   // raiz web do Hostgator
+
+    // Remove qualquer symlink ou pasta errada
+    if (is_link($link)) {
+        unlink($link);
+    } elseif (is_dir($link)) {
+        rmdir($link); // só funciona se estiver vazia
+    }
+
+    if (symlink($target, $link)) {
+        return [
+            'status'  => '✅ Symlink criado com sucesso!',
+            'target'  => $target,
+            'link'    => $link,
+            'testUrl' => 'https://poncianoproductions.com.br/storage/uploads/',
+        ];
+    }
+
+    return ['status' => '❌ Falhou ao criar symlink'];
+});
+
 // ── AUTENTICAÇÃO ─────────────────────────────────────────────────
 Route::get('/',       [LoginController::class, 'showLoginForm'])->name('login');
 Route::get('/login',  [LoginController::class, 'showLoginForm']);
