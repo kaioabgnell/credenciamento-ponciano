@@ -125,8 +125,10 @@ Route::middleware(['auth', SetEventoAtivo::class])->group(function () {
     Route::patch('/eventos/{evento}/ativo',  [EventoController::class, 'toggleAtivo'])->name('eventos.toggle-ativo');
 
     // Relatório
-    Route::get('/relatorio',                      [RelatorioController::class, 'index'])->name('relatorio.index');
-    Route::get('/api/relatorio/indicadores-vivo', [RelatorioController::class, 'indicadoresAoVivo'])->name('api.relatorio.indicadores');
+    Route::get('/relatorio',                         [RelatorioController::class, 'index'])->name('relatorio.index');
+    Route::get('/relatorio/funcionarios',            [RelatorioController::class, 'funcionarios'])->name('relatorio.funcionarios');
+    Route::get('/relatorio/funcionarios/exportar',   [RelatorioController::class, 'exportarFuncionarios'])->name('relatorio.funcionarios.exportar');
+    Route::get('/api/relatorio/indicadores-vivo',    [RelatorioController::class, 'indicadoresAoVivo'])->name('api.relatorio.indicadores');
 
     // Usuários
     Route::get('/usuarios',                   [UsuarioController::class, 'index'])->name('usuarios.index');

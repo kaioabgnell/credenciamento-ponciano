@@ -144,8 +144,13 @@
     </a>
 
     <a href="{{ route('relatorio.index') }}"
-       class="nav-item {{ request()->routeIs('relatorio.*') ? 'active' : '' }}">
+       class="nav-item {{ request()->routeIs('relatorio.index') ? 'active' : '' }}">
       <span class="nav-label">Relatório Geral</span>
+    </a>
+
+    <a href="{{ route('relatorio.funcionarios') }}"
+       class="nav-item {{ request()->routeIs('relatorio.funcionarios*') ? 'active' : '' }}">
+      <span class="nav-label">Relatório por Funcionário</span>
     </a>
 
     <div class="nav-section">Sistema</div>
