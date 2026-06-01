@@ -265,8 +265,6 @@
             <button onclick="window.print()" class="btn-exportar btn-print">
                 🖨 Imprimir / PDF
             </button>
-
-
         </div>
     @endif
     <span style="font-size:12px; color:var(--cinza-400); margin-left:4px">
