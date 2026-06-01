@@ -120,6 +120,19 @@
           </div>
         </div>
 
+        {{-- Número da pulseira --}}
+        <div style="margin-bottom:16px">
+          <label style="font-size:12px; font-weight:600; color:var(--cinza-500); text-transform:uppercase; letter-spacing:.5px; display:block; margin-bottom:6px">
+            🪪 Número da Pulseira <span style="font-weight:400; color:var(--cinza-400)">(opcional)</span>
+          </label>
+          <input type="text" id="input-pulseira"
+                 class="form-control"
+                 maxlength="10"
+                 autocomplete="off"
+                 style="font-size:16px; font-weight:700; text-transform:uppercase; letter-spacing:2px; text-align:center; max-width:200px">
+          <div style="font-size:11px; color:var(--cinza-400); margin-top:4px">Máx. 10 caracteres — letras e números</div>
+        </div>
+
         <div class="d-flex gap-12" style="justify-content:center; flex-wrap:wrap">
           <button class="btn-ponto-entrada" id="btn-entrada" onclick="baterEntrada()">
             ▶ Registrar Entrada
@@ -207,6 +220,11 @@
               Entrada: <span class="mono" style="font-weight:600; color:#92610a">{{ $ponto->data?->format('d/m') ?? '—' }} {{ substr($ponto->entrada ?? '', 0, 5) }}</span>
               · {{ $ponto->empresa?->nome ?? 'Sem empresa vinculada' }}
             </div>
+            @if($ponto->pulseira)
+            <div style="font-size:11px; color:var(--cinza-600); margin-top:2px">
+              Pulseira: <span class="mono" style="font-weight:700; color:var(--azul-primario)">{{ $ponto->pulseira }}</span>
+            </div>
+            @endif
             @if($ponto->evento)
             <span style="display:inline-flex;align-items:center;gap:4px;background:var(--roxo-light,#ede9fe);color:var(--roxo);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:600;margin-top:3px">
               {{ $ponto->evento->nome }}
@@ -270,6 +288,11 @@
             Entrada: <span class="mono" style="font-weight:600; color:var(--verde)">{{ substr($ponto->entrada ?? '', 0, 5) }}</span>
             · {{ $ponto->empresa?->nome ?? 'Sem empresa' }}
           </div>
+          @if($ponto->pulseira)
+          <div style="font-size:11px; color:var(--cinza-600); margin-top:2px">
+            Pulseira: <span class="mono" style="font-weight:700; color:var(--azul-primario)">{{ $ponto->pulseira }}</span>
+          </div>
+          @endif
           @if($ponto->evento)
           <div style="margin-top:3px">
             <span style="display:inline-flex;align-items:center;gap:4px;background:var(--roxo-light,#ede9fe);color:var(--roxo);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:600">
@@ -429,19 +452,27 @@ $(document).on('keydown', '#input-entrada-manual', function (e) {
   if (e.key === 'Enter') baterEntradaManual();
 });
 
+// Limita pulseira a alfanumérico e força maiúsculo em tempo real
+$(document).on('input', '#input-pulseira', function () {
+  const v = $(this).val().replace(/[^A-Za-z0-9]/g, '').toUpperCase().substring(0, 10);
+  $(this).val(v);
+});
+
 // ── Bater entrada AUTOMÁTICA ──────────────────────────────────────
 window.baterEntrada = function () {
   if (!funcionarioSelecionado) return;
+  const pulseira = $('#input-pulseira').val().trim() || null;
   const btn = $('#btn-entrada').prop('disabled', true).text('Registrando...');
-  $.post('/api/ponto/entrada', { funcionario_id: funcionarioSelecionado.id })
+  $.post('/api/ponto/entrada', { funcionario_id: funcionarioSelecionado.id, pulseira })
     .done(function (res) {
       showToast(res.mensagem, 'success');
-      adicionarNaListaPresentes(funcionarioSelecionado, res.horario, res.evento_nome);
+      adicionarNaListaPresentes(funcionarioSelecionado, res.horario, res.evento_nome, res.pulseira);
       $('#func-status').html('<span class="badge badge-presente">● Presente</span>');
       $('#btn-entrada').addClass('hidden');
       $('#btn-entrada-manual-toggle').addClass('hidden');
       $('#btn-saida').removeClass('hidden').data('ponto-id', res.ponto_id);
       $('#painel-entrada-manual').hide();
+      $('#input-pulseira').val('');
       const atual = parseInt($('#contador-presentes').text()) || 0;
       $('#contador-presentes').text(atual + 1);
       $('#nenhum-presente').remove();
@@ -470,16 +501,18 @@ window.baterEntradaManual = function () {
     mostrarErroEntrada('O horário de entrada não pode ser no futuro.');
     return;
   }
+  const pulseira = $('#input-pulseira').val().trim() || null;
   const btn = $('[onclick="baterEntradaManual()"]').prop('disabled', true).text('Registrando...');
-  $.post('/api/ponto/entrada', { funcionario_id: funcionarioSelecionado.id, entrada_manual: horario })
+  $.post('/api/ponto/entrada', { funcionario_id: funcionarioSelecionado.id, entrada_manual: horario, pulseira })
     .done(function (res) {
       showToast(res.mensagem + ' às ' + res.horario, 'success');
-      adicionarNaListaPresentes(funcionarioSelecionado, res.horario, res.evento_nome);
+      adicionarNaListaPresentes(funcionarioSelecionado, res.horario, res.evento_nome, res.pulseira);
       $('#func-status').html('<span class="badge badge-presente">● Presente</span>');
       $('#btn-entrada').addClass('hidden');
       $('#btn-entrada-manual-toggle').addClass('hidden');
       $('#btn-saida').removeClass('hidden').data('ponto-id', res.ponto_id);
       $('#painel-entrada-manual').hide();
+      $('#input-pulseira').val('');
       const atual = parseInt($('#contador-presentes').text()) || 0;
       $('#contador-presentes').text(atual + 1);
       $('#nenhum-presente').remove();
@@ -639,7 +672,12 @@ window.baterSaidaDireto = function (pontoId, nome, funcId) {
 };
 
 // ── Adicionar na lista de presentes ──────────────────────────────
-function adicionarNaListaPresentes(f, hora, eventoNome) {
+function adicionarNaListaPresentes(f, hora, eventoNome, pulseira) {
+  const pulseiraTag = pulseira
+    ? `<div style="font-size:11px; color:var(--cinza-600); margin-top:2px">
+         Pulseira: <span class="mono" style="font-weight:700; color:var(--azul-primario)">${pulseira}</span>
+       </div>`
+    : '';
   const eventoTag = eventoNome
     ? `<div style="margin-top:3px">
          <span style="display:inline-flex;align-items:center;gap:4px;background:var(--roxo-light,#ede9fe);color:var(--roxo);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:600">
@@ -656,6 +694,7 @@ function adicionarNaListaPresentes(f, hora, eventoNome) {
       <div style="flex:1; overflow:hidden">
         <div style="font-size:13px; font-weight:600; color:var(--cinza-800)">${f.nome}</div>
         <div style="font-size:11px; color:var(--cinza-500)">Entrada: <span class="mono" style="font-weight:600;color:var(--verde)">${hora}</span> · ${f.empresa}</div>
+        ${pulseiraTag}
         ${eventoTag}
       </div>
       <button class="btn-icon" style="width:30px;height:30px;background:var(--vermelho-light);border-color:var(--vermelho);color:var(--vermelho)"

@@ -24,7 +24,12 @@ class PontoController extends Controller
 
         if ($empresa_id) $query->where('empresa_id', $empresa_id);
         if ($status)     $query->where('status', $status);
-        if ($busca)      $query->whereHas('funcionario', fn($q) => $q->busca($busca));
+        if ($busca) {
+            $query->where(function ($q) use ($busca) {
+                $q->whereHas('funcionario', fn($qf) => $qf->busca($busca))
+                  ->orWhere('pulseira', 'like', "%{$busca}%");
+            });
+        }
         if ($evento_id)  $query->where('evento_id', $evento_id);
 
         $pontos = $query->orderBy('entrada')->paginate(30)->withQueryString();
@@ -81,8 +86,10 @@ class PontoController extends Controller
         $request->validate([
             'funcionario_id' => 'required|exists:funcionarios,id',
             'entrada_manual' => 'nullable|date_format:H:i',
+            'pulseira'       => 'nullable|string|max:10',
         ], [
             'entrada_manual.date_format' => 'Horário inválido. Use o formato HH:MM.',
+            'pulseira.max'               => 'A pulseira deve ter no máximo 10 caracteres.',
         ]);
 
         // Sempre usa o evento ativo da sessão
@@ -90,15 +97,14 @@ class PontoController extends Controller
 
         $funcionario = Funcionario::with('empresa')->findOrFail($request->funcionario_id);
 
-        $ponto = Ponto::whereDate('data', today())
-                      ->where('funcionario_id', $funcionario->id)
-                      ->first();
+        // Bloqueia somente se houver um turno ABERTO (presente) — permite dobra após finalizado
+        $pontoAberto = Ponto::whereDate('data', today())
+                            ->where('funcionario_id', $funcionario->id)
+                            ->where('status', 'presente')
+                            ->first();
 
-        if ($ponto) {
-            if ($ponto->status === 'presente')
-                return response()->json(['erro' => 'Funcionário já registrou entrada hoje.'], 422);
-            if ($ponto->status === 'finalizado')
-                return response()->json(['erro' => 'Jornada já encerrada hoje.'], 422);
+        if ($pontoAberto) {
+            return response()->json(['erro' => 'Funcionário já está com entrada aberta. Registre a saída antes de iniciar um novo turno.'], 422);
         }
 
         // Horário manual ou automático
@@ -116,6 +122,10 @@ class PontoController extends Controller
             $horarioExibir = now()->format('H:i');
         }
 
+        $pulseira = $request->filled('pulseira')
+            ? strtoupper(trim($request->pulseira))
+            : null;
+
         $pontoNovo = Ponto::create([
             'funcionario_id' => $funcionario->id,
             'empresa_id'     => $funcionario->empresa_id,
@@ -124,6 +134,7 @@ class PontoController extends Controller
             'entrada'        => $entrada,
             'status'         => 'presente',
             'registrado_por' => Auth::id(),
+            'pulseira'       => $pulseira,
         ]);
 
         $eventoNome = null;
@@ -137,9 +148,10 @@ class PontoController extends Controller
             'mensagem'     => "Entrada registrada para {$funcionario->nome}",
             'horario'      => $horarioExibir,
             'evento_nome'  => $eventoNome,
+            'pulseira'     => $pulseira,
             'funcionario'  => [
                 'nome'     => $funcionario->nome,
-                'empresa'  => $funcionario->empresa->nome,
+                'empresa'  => $funcionario->empresa?->nome ?? 'Sem empresa',
                 'funcao'   => $funcionario->funcao_cargo,
                 'foto_url' => $funcionario->foto_url,
             ],
@@ -166,7 +178,7 @@ class PontoController extends Controller
             if ($request->filled('data_saida')) {
                 try {
                     $dataSaidaStr = Carbon::createFromFormat('d/m/Y', $request->data_saida)->format('Y-m-d');
-                } catch (\Exception $e) {}
+                } catch (\Exception) {}
             }
 
             $dtEntrada = Carbon::parse($ponto->data->format('Y-m-d') . ' ' . $ponto->entrada);

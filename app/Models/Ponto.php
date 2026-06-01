@@ -11,7 +11,7 @@ class Ponto extends Model
 
     protected $fillable = [
         'funcionario_id', 'empresa_id', 'evento_id', 'data', 'entrada',
-        'saida', 'horas_trabalhadas', 'status', 'registrado_por', 'obs',
+        'saida', 'horas_trabalhadas', 'status', 'registrado_por', 'obs', 'pulseira',
     ];
 
     protected $casts = [

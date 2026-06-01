@@ -46,7 +46,7 @@
   <div class="search-box">
     <span class="search-icon">🔍</span>
     <input type="text" name="busca" class="form-control" id="campo-busca-global"
-           placeholder="Buscar funcionário..." value="{{ $busca }}">
+           placeholder="Buscar funcionário ou pulseira..." value="{{ $busca }}">
   </div>
 
   <select name="evento_id" class="form-control form-select" style="width:190px" onchange="this.form.submit()">
@@ -83,6 +83,7 @@
           <th>Função</th>
           <th>Coord.</th>
           <th>Data</th>
+          <th>Pulseira</th>
           <th>Entrada</th>
           <th>Saída</th>
           <th>Horas</th>
@@ -110,6 +111,9 @@
             @endif
           </td>
           <td class="mono td-data" style="font-size:12.5px">{{ $ponto->data?->format('d/m/Y') ?? '—' }}</td>
+          <td class="mono" style="font-size:12.5px; font-weight:700; color:var(--azul-primario); letter-spacing:1px">
+            {{ $ponto->pulseira ?? '—' }}
+          </td>
           <td class="mono td-entrada" style="color:var(--verde); font-weight:600">
             {{ $ponto->entrada ? substr($ponto->entrada, 0, 5) : '—' }}
           </td>
@@ -135,7 +139,7 @@
         </tr>
         @empty
         <tr>
-          <td colspan="10" style="text-align:center; padding:48px; color:var(--cinza-400)">
+          <td colspan="11" style="text-align:center; padding:48px; color:var(--cinza-400)">
             <div style="font-size:36px; margin-bottom:8px">⏱</div>
             Nenhum registro encontrado para o filtro selecionado.
           </td>
