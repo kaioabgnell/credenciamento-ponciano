@@ -21,6 +21,10 @@
 </div>
 @endif
 
+@php
+  $telOrgDigitos = preg_replace('/\D/', '', old('telefone_organizador', $evento->telefone_organizador ?? ''));
+@endphp
+
 <form method="POST"
       action="{{ $modo === 'criar' ? route('eventos.store') : route('eventos.update', $evento) }}">
   @csrf
@@ -82,9 +86,9 @@
 
       <div class="form-group">
         <label class="form-label" for="telefone_organizador">Telefone do Organizador</label>
-        <input type="text" id="telefone_organizador" name="telefone_organizador"
+        <input type="text" id="campo-tel-organizador" name="telefone_organizador"
                class="form-control" data-mask="tel"
-               value="{{ old('telefone_organizador', $evento->telefone_organizador) }}"
+               data-prefill="{{ $telOrgDigitos }}"
                placeholder="(00) 00000-0000">
       </div>
     </div>
@@ -109,6 +113,14 @@
 
 @push('scripts')
 <script>
+// Pré-preenche telefone após inicialização do jQuery Mask
+$(function () {
+  const telDigits = String($('#campo-tel-organizador').data('prefill') || '');
+  if (telDigits.length >= 10) {
+    $('#campo-tel-organizador').unmask().val(telDigits).mask('(00) 00000-0000');
+  }
+});
+
 // Preview de duração ao selecionar as datas
 function atualizarPreview() {
   const ini = document.getElementById('data_inicio').value;
