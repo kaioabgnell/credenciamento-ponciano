@@ -126,7 +126,7 @@
                   @endif
                 </div>
               </td>
-              <td class="text-muted">{{ $p->empresa->nome }}</td>
+              <td class="text-muted">{{ $p->empresa?->nome ?? 'Sem empresa' }}</td>
               <td class="mono" style="color:var(--verde); font-weight:600">{{ substr($p->entrada, 0, 5) }}</td>
             </tr>
             @endforeach

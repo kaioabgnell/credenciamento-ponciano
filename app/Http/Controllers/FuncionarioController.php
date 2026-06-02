@@ -117,21 +117,37 @@ class FuncionarioController extends Controller
 
     private function validar(Request $request, ?int $ignorarId = null): array
     {
-        return $request->validate([
-            'empresa_id'   => 'required|exists:empresas,id',
-            'nome'         => 'required|string|max:200',
-            'cpf'          => 'nullable|string|max:14',
-            'telefone'     => 'nullable|string|max:20',
-            'foto'         => 'nullable|image|max:2048',
-            'funcao_cargo' => 'required|string|max:100',
-            'area_acesso'  => 'required|string|max:100',
-            'coordenador'  => 'nullable|boolean',
+        $dados = $request->validate([
+            'empresa_id'      => 'required|exists:empresas,id',
+            'nome'            => 'required|string|max:200',
+            'cpf'             => 'nullable|string|max:14',
+            'telefone'        => 'nullable|string|max:20',
+            'foto'            => 'nullable|image|max:2048',
+            'funcao_cargo'    => 'required|string|max:100',
+            'area_acesso'     => 'required|string|max:100',
+            'coordenador'     => 'nullable|boolean',
+            'data_nascimento' => 'nullable|string|max:10',
         ], [
             'empresa_id.required'   => 'Selecione uma empresa.',
             'nome.required'         => 'O nome é obrigatório.',
             'funcao_cargo.required' => 'A função/cargo é obrigatória.',
             'area_acesso.required'  => 'Selecione a área de acesso.',
-        ]) + ['coordenador' => $request->boolean('coordenador')];
+        ]);
+
+        $dados['coordenador'] = $request->boolean('coordenador');
+
+        // Converte dd/mm/yyyy → yyyy-mm-dd para armazenar no banco
+        if (! empty($dados['data_nascimento'])) {
+            try {
+                $dados['data_nascimento'] = \Carbon\Carbon::createFromFormat('d/m/Y', $dados['data_nascimento'])->format('Y-m-d');
+            } catch (\Exception) {
+                $dados['data_nascimento'] = null;
+            }
+        } else {
+            $dados['data_nascimento'] = null;
+        }
+
+        return $dados;
     }
 
     private function processarFoto(Request $request): ?string

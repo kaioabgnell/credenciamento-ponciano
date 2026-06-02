@@ -13,7 +13,7 @@ class Funcionario extends Model
 
     protected $fillable = [
         'empresa_id', 'nome', 'cpf', 'telefone', 'foto',
-        'funcao_cargo', 'area_acesso', 'coordenador', 'ativo',
+        'funcao_cargo', 'area_acesso', 'coordenador', 'ativo', 'data_nascimento',
     ];
 
     protected $casts = [

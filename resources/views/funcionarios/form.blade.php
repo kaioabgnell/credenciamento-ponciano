@@ -24,6 +24,15 @@
   // Extrai apenas dígitos para que o jQuery Mask aplique a formatação sem conflito
   $cpfDigitos = preg_replace('/\D/', '', old('cpf', $funcionario->cpf ?? ''));
   $telDigitos = preg_replace('/\D/', '', old('telefone', $funcionario->telefone ?? ''));
+
+  // Data de nascimento: converte Y-m-d → dmY (8 dígitos) para o prefill da máscara
+  $dataNascRaw = old('data_nascimento', '');
+  if (! $dataNascRaw && ! empty($funcionario->data_nascimento)) {
+      try {
+          $dataNascRaw = \Carbon\Carbon::parse($funcionario->data_nascimento)->format('d/m/Y');
+      } catch (\Exception) {}
+  }
+  $dataNascDigitos = preg_replace('/\D/', '', $dataNascRaw);
 @endphp
 
 <form method="POST" enctype="multipart/form-data"
@@ -97,6 +106,14 @@
           <input type="text" id="campo-telefone" name="telefone" class="form-control" data-mask="tel"
                  data-prefill="{{ $telDigitos }}"
                  placeholder="(00) 00000-0000">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Data de Nascimento</label>
+          <input type="text" id="campo-data-nascimento" name="data_nascimento"
+                 class="form-control"
+                 data-prefill="{{ $dataNascDigitos }}"
+                 placeholder="dd/mm/aaaa" maxlength="10" autocomplete="off">
         </div>
 
         <div class="form-group">
@@ -228,8 +245,6 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 // ── Pré-preenche campos com máscara ──────────────────────────────
-// jQuery Mask 1.14 apaga o value durante a inicialização em app.js.
-// Solução: unmask → seta dígitos → re-aplica mask (que formata no momento do .mask()).
 $(function () {
   const cpfDigits = String($('#campo-cpf').data('prefill') || '');
   if (cpfDigits.length === 11) {
@@ -240,6 +255,24 @@ $(function () {
   if (telDigits.length >= 10) {
     $('#campo-telefone').unmask().val(telDigits).mask('(00) 00000-0000');
   }
+
+  // Data de nascimento — máscara dd/mm/aaaa
+  const dateDigits = String($('#campo-data-nascimento').data('prefill') || '');
+  if (dateDigits.length === 8) {
+    const fmt = dateDigits.substring(0,2) + '/' + dateDigits.substring(2,4) + '/' + dateDigits.substring(4);
+    $('#campo-data-nascimento').val(fmt);
+  }
+  $('#campo-data-nascimento').mask('00/00/0000');
+
+  // Máscara ao digitar — valida ao sair do campo
+  $('#campo-data-nascimento').on('blur', function () {
+    const v = $(this).val();
+    if (v && !/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+      $(this).addClass('is-invalid');
+    } else {
+      $(this).removeClass('is-invalid');
+    }
+  });
 });
 
 // Inicializar Select2 na empresa

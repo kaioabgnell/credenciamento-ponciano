@@ -47,14 +47,24 @@
 
       {{-- Informações --}}
       <div style="display:flex; flex-direction:column; gap:12px; flex:1">
-        @foreach([
-          ['CPF',       $funcionario->cpf_formatado, '🪪'],
-          ['Telefone',  $funcionario->telefone ?: '—', '📞'],
-          ['Empresa',   $funcionario->empresa->nome ?? '—', '🏢'],
-          ['Função',    $funcionario->funcao_cargo, '💼'],
-          ['Área',      $funcionario->area_acesso, '🚪'],
-          ['Cadastrado', $funcionario->created_at->format('d/m/Y'), '📅'],
-        ] as [$label, $valor, $icon])
+        @php
+          $infoItens = [
+            ['CPF',              $funcionario->cpf_formatado, '🪪'],
+            ['Telefone',         $funcionario->telefone ?: '—', '📞'],
+            ['Empresa',          $funcionario->empresa?->nome ?? '—', '🏢'],
+            ['Função',           $funcionario->funcao_cargo, '💼'],
+            ['Área',             $funcionario->area_acesso, '🚪'],
+            ['Cadastrado',       $funcionario->created_at->format('d/m/Y'), '📅'],
+          ];
+          if ($funcionario->data_nascimento) {
+              $infoItens[] = [
+                'Data de Nascimento',
+                \Carbon\Carbon::parse($funcionario->data_nascimento)->format('d/m/Y'),
+                '🎂'
+              ];
+          }
+        @endphp
+        @foreach($infoItens as [$label, $valor, $icon])
         <div style="display:flex; gap:10px; align-items:flex-start">
           <span style="font-size:16px; width:24px; flex-shrink:0; margin-top:2px">{{ $icon }}</span>
           <div>

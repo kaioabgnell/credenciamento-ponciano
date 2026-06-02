@@ -9,6 +9,7 @@ use App\Http\Controllers\PontoController;
 use App\Http\Controllers\EventoController;
 use App\Http\Controllers\RelatorioController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\ImportacaoController;
 use App\Http\Middleware\SetEventoAtivo;
 
 // ── Diagnóstico e criação do symlink ────────────────────────────
@@ -137,5 +138,10 @@ Route::middleware(['auth', SetEventoAtivo::class])->group(function () {
     Route::get('/usuarios/{usuario}/editar',  [UsuarioController::class, 'edit'])->name('usuarios.edit');
     Route::put('/usuarios/{usuario}',         [UsuarioController::class, 'update'])->name('usuarios.update');
     Route::patch('/usuarios/{usuario}/ativo', [UsuarioController::class, 'toggleAtivo'])->name('usuarios.toggle-ativo');
+
+    // Importações
+    Route::get('/importacoes',               [ImportacaoController::class, 'index'])->name('importacoes.index');
+    Route::post('/importacoes/upload',       [ImportacaoController::class, 'upload'])->name('importacoes.upload');
+    Route::post('/importacoes/processar',    [ImportacaoController::class, 'processar'])->name('importacoes.processar');
 
 });
