@@ -55,6 +55,36 @@ class PontoController extends Controller
         ));
     }
 
+    public function indexPdf(Request $request)
+    {
+        $data       = $request->input('data', today()->format('Y-m-d'));
+        $empresa_id = $request->input('empresa_id');
+        $status     = $request->input('status');
+        $busca      = $request->input('busca');
+        $evento_id  = $request->input('evento_id', session('evento_ativo_id'));
+
+        $query = Ponto::with(['funcionario.empresa', 'empresa', 'evento'])
+            ->whereDate('data', $data);
+
+        if ($empresa_id) $query->where('empresa_id', $empresa_id);
+        if ($status)     $query->where('status', $status);
+        if ($busca) {
+            $query->where(function ($q) use ($busca) {
+                $q->whereHas('funcionario', fn($qf) => $qf->busca($busca))
+                  ->orWhere('pulseira', 'like', "%{$busca}%");
+            });
+        }
+        if ($evento_id) $query->where('evento_id', $evento_id);
+
+        $pontos       = $query->orderBy('entrada')->get();
+        $eventoNome   = $evento_id ? Evento::find($evento_id)?->nome : null;
+        $empresaNome  = $empresa_id ? \App\Models\Empresa::find($empresa_id)?->nome : null;
+
+        return view('ponto.index-pdf', compact(
+            'pontos', 'data', 'status', 'busca', 'eventoNome', 'empresaNome'
+        ));
+    }
+
     public function registrar()
     {
         $eventoAtivoId = session('evento_ativo_id');
@@ -289,5 +319,15 @@ class PontoController extends Controller
     {
         $pontos = $funcionario->pontos()->with('evento')->orderByDesc('data')->paginate(20);
         return view('ponto.historico', compact('funcionario', 'pontos'));
+    }
+
+    public function historicoPdf(Funcionario $funcionario)
+    {
+        $pontos = $funcionario->pontos()
+            ->with(['evento', 'empresa'])
+            ->orderByDesc('data')
+            ->get();
+
+        return view('ponto.historico-pdf', compact('funcionario', 'pontos'));
     }
 }

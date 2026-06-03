@@ -185,7 +185,6 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">
-      <span class="page-icon">📊</span>
       Relatório Geral
     </h1>
     <p class="page-subtitle">

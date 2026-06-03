@@ -157,13 +157,11 @@
 
     <a href="{{ route('usuarios.index') }}"
        class="nav-item {{ request()->routeIs('usuarios.*') ? 'active' : '' }}">
-      <span class="nav-icon">🔑</span>
       <span class="nav-label">Usuários</span>
     </a>
 
     <a href="{{ route('importacoes.index') }}"
        class="nav-item {{ request()->routeIs('importacoes.*') ? 'active' : '' }}">
-      <span class="nav-icon">📥</span>
       <span class="nav-label">Importações</span>
     </a>
 

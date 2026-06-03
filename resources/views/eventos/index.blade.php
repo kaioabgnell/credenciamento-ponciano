@@ -6,7 +6,7 @@
 
 <div class="page-header">
   <div>
-    <h1 class="page-title"><span class="page-icon"></span> Eventos</h1>
+    <h1 class="page-title">Eventos</h1>
     <p class="page-subtitle">Gerencie os eventos do sistema de credenciamento</p>
   </div>
   <a href="{{ route('eventos.create') }}" class="btn btn-primary">+ Novo Evento</a>

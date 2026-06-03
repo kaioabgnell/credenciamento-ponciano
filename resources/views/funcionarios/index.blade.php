@@ -6,7 +6,7 @@
 
 <div class="page-header">
   <div>
-    <h1 class="page-title"><span class="page-icon">👥</span> Funcionários</h1>
+    <h1 class="page-title">Funcionários</h1>
     <p class="page-subtitle">{{ $funcionarios->total() }} funcionário(s) encontrado(s)</p>
   </div>
   <a href="{{ route('funcionarios.create') }}" class="btn btn-primary">+ Novo Funcionário</a>

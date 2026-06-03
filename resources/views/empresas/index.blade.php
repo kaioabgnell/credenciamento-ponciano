@@ -6,7 +6,7 @@
 
 <div class="page-header">
   <div>
-    <h1 class="page-title"><span class="page-icon">🏢</span> Empresas</h1>
+    <h1 class="page-title">Empresas</h1>
     <p class="page-subtitle">{{ $total }} empresa(s) cadastrada(s)</p>
   </div>
   <a href="{{ route('empresas.create') }}" class="btn btn-primary">+ Nova Empresa</a>

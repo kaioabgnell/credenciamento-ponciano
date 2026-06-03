@@ -124,7 +124,7 @@
 
     <div class="page-header">
         <div>
-            <h1 class="page-title"><span class="page-icon">👤</span> Relatório por Funcionário</h1>
+            <h1 class="page-title"> Relatório por Funcionário</h1>
             <p class="page-subtitle">
                 Levantamento de horas e presenças por colaborador
                 @if ($dataInicio === $dataFim)

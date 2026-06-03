@@ -6,7 +6,7 @@
 
 <div class="page-header">
   <div>
-    <h1 class="page-title"><span class="page-icon">📥</span> Importações</h1>
+    <h1 class="page-title">Importações</h1>
     <p class="page-subtitle">Histórico de importações de empresas e funcionários via planilha</p>
   </div>
   <button class="btn btn-primary" onclick="abrirModalUpload()">

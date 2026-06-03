@@ -115,7 +115,9 @@ Route::middleware(['auth', SetEventoAtivo::class])->group(function () {
     Route::post('/api/ponto/saida-funcionario', [PontoController::class, 'saidaPorFuncionario'])->name('api.ponto.saida-funcionario');
     Route::put('/api/ponto/{ponto}',            [PontoController::class, 'update'])->name('api.ponto.update');
     Route::delete('/api/ponto/{ponto}',         [PontoController::class, 'destroy'])->name('api.ponto.destroy');
-    Route::get('/ponto/historico/{funcionario}',[PontoController::class, 'historico'])->name('ponto.historico');
+    Route::get('/ponto/pdf',                         [PontoController::class, 'indexPdf'])->name('ponto.index.pdf');
+    Route::get('/ponto/historico/{funcionario}',     [PontoController::class, 'historico'])->name('ponto.historico');
+    Route::get('/ponto/historico/{funcionario}/pdf', [PontoController::class, 'historicoPdf'])->name('ponto.historico.pdf');
 
     // Eventos
     Route::get('/eventos',                   [EventoController::class, 'index'])->name('eventos.index');
