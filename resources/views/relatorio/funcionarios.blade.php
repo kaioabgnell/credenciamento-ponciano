@@ -243,33 +243,27 @@
     </div>
 
     {{-- ── BARRA EXPORTAR ───────────────────────────────────────── --}}
-    @if (false)
-        <div class="d-flex gap-10 align-center export-row no-print" style="margin-bottom:16px; flex-wrap:wrap">
-            <span style="font-size:13px; color:var(--cinza-500); font-weight:600">Exportar:</span>
+    <div class="d-flex gap-10 align-center export-row no-print" style="margin-bottom:16px; flex-wrap:wrap">
 
-            <a href="{{ route(
-                'relatorio.funcionarios.exportar',
-                array_filter([
-                    'data_inicio' => $dataInicio,
-                    'data_fim' => $dataFim,
-                    'evento_id' => $eventoId,
-                    'empresa_id' => $empresaId,
-                    'busca' => $busca,
-                    'formato' => 'xls',
-                ]),
-            ) }}"
-                class="btn-exportar btn-xls">
-                📊 Excel (.xlsx)
-            </a>
+      <a href="{{ route('relatorio.funcionarios.pdf', array_filter([
+            'data_inicio' => $dataInicio,
+            'data_fim'    => $dataFim,
+            'evento_id'   => $eventoId,
+            'empresa_id'  => $empresaId,
+            'busca'       => $busca,
+         ])) }}"
+         target="_blank"
+         class="btn-exportar btn-print"
+         title="Exportar listagem completa em PDF">
+        📄 Exportar PDF
+      </a>
 
-            <button onclick="window.print()" class="btn-exportar btn-print">
-                🖨 Imprimir / PDF
-            </button>
-        </div>
-    @endif
-    <span style="font-size:12px; color:var(--cinza-400); margin-left:4px">
+     
+      <span style="font-size:12px; color:var(--cinza-400); margin-left: 20px;">
         {{ $funcionarios->total() }} funcionário(s) encontrado(s)
-    </span>
+      </span>
+
+    </div>
     {{-- ── TABELA ───────────────────────────────────────────────── --}}
     <div class="card" style="padding:0">
         <div class="table-container" style="border:none">

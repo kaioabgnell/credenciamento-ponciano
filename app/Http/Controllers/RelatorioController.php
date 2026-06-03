@@ -240,6 +240,57 @@ class RelatorioController extends Controller
         );
     }
 
+    public function exportarFuncionariosPdf(Request $request)
+    {
+        $dataInicio = $request->input('data_inicio', today()->format('Y-m-d'));
+        $dataFim    = $request->input('data_fim',    today()->format('Y-m-d'));
+        $eventoId   = $request->input('evento_id',   '');
+        $empresaId  = $request->input('empresa_id',  '');
+        $busca      = $request->input('busca',        '');
+
+        $funcionarios = Funcionario::select('funcionarios.*')
+            ->with('empresa')
+            ->when($empresaId, fn($q) => $q->where('funcionarios.empresa_id', $empresaId))
+            ->when($busca,     fn($q) => $q->busca($busca))
+            ->whereHas('pontos', function ($q) use ($dataInicio, $dataFim, $eventoId) {
+                $q->whereBetween('data', [$dataInicio, $dataFim])
+                  ->when($eventoId, fn($q) => $q->where('evento_id', $eventoId));
+            })
+            ->addSelect([
+                'total_entradas' => Ponto::selectRaw('COUNT(*)')
+                    ->whereColumn('funcionario_id', 'funcionarios.id')
+                    ->whereNotNull('entrada')
+                    ->whereBetween('data', [$dataInicio, $dataFim])
+                    ->when($eventoId, fn($q) => $q->where('evento_id', $eventoId)),
+
+                'total_saidas' => Ponto::selectRaw('COUNT(*)')
+                    ->whereColumn('funcionario_id', 'funcionarios.id')
+                    ->whereNotNull('saida')
+                    ->whereBetween('data', [$dataInicio, $dataFim])
+                    ->when($eventoId, fn($q) => $q->where('evento_id', $eventoId)),
+
+                'dias_trabalhados' => Ponto::selectRaw('COUNT(DISTINCT data)')
+                    ->whereColumn('funcionario_id', 'funcionarios.id')
+                    ->whereBetween('data', [$dataInicio, $dataFim])
+                    ->when($eventoId, fn($q) => $q->where('evento_id', $eventoId)),
+
+                'total_segundos' => Ponto::selectRaw('COALESCE(SUM(TIME_TO_SEC(horas_trabalhadas)), 0)')
+                    ->whereColumn('funcionario_id', 'funcionarios.id')
+                    ->whereNotNull('horas_trabalhadas')
+                    ->whereBetween('data', [$dataInicio, $dataFim])
+                    ->when($eventoId, fn($q) => $q->where('evento_id', $eventoId)),
+            ])
+            ->orderByDesc('total_segundos')
+            ->get();
+
+        $eventoNome  = $eventoId  ? Evento::find($eventoId)?->nome  : null;
+        $empresaNome = $empresaId ? Empresa::find($empresaId)?->nome : null;
+
+        return view('relatorio.funcionarios-pdf', compact(
+            'funcionarios', 'dataInicio', 'dataFim', 'eventoNome', 'empresaNome', 'busca'
+        ));
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  API — Indicadores ao vivo (polling AJAX)
     // ──────────────────────────────────────────────────────────────

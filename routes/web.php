@@ -131,6 +131,7 @@ Route::middleware(['auth', SetEventoAtivo::class])->group(function () {
     Route::get('/relatorio',                         [RelatorioController::class, 'index'])->name('relatorio.index');
     Route::get('/relatorio/funcionarios',            [RelatorioController::class, 'funcionarios'])->name('relatorio.funcionarios');
     Route::get('/relatorio/funcionarios/exportar',   [RelatorioController::class, 'exportarFuncionarios'])->name('relatorio.funcionarios.exportar');
+    Route::get('/relatorio/funcionarios/pdf',        [RelatorioController::class, 'exportarFuncionariosPdf'])->name('relatorio.funcionarios.pdf');
     Route::get('/api/relatorio/indicadores-vivo',    [RelatorioController::class, 'indicadoresAoVivo'])->name('api.relatorio.indicadores');
 
     // Usuários
