@@ -146,7 +146,7 @@
         <div class="search-box">
             <span class="search-icon">🔍</span>
             <input type="text" name="busca" class="form-control" id="campo-busca-global"
-                placeholder="Nome ou CPF do funcionário..." value="{{ $busca }}">
+                placeholder="Nome, CPF ou função do funcionário..." value="{{ $busca }}">
         </div>
 
         {{-- Evento --}}
