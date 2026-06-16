@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empresa;
+use App\Models\Evento;
 use App\Models\Funcionario;
 use App\Models\Importacao;
 use Carbon\Carbon;
@@ -21,8 +22,9 @@ class ImportacaoController extends Controller
             ->paginate(20);
 
         $modeloUrl = asset('storage/uploads/modelo/CREDENCIAMENTO-PLANILHA-MODELO.xlsx');
+        $eventos   = Evento::ativos()->orderByDesc('data_inicio')->get();
 
-        return view('importacoes.index', compact('importacoes', 'modeloUrl'));
+        return view('importacoes.index', compact('importacoes', 'modeloUrl', 'eventos'));
     }
 
     // ── Upload e análise ─────────────────────────────────────────────
@@ -104,6 +106,7 @@ class ImportacaoController extends Controller
         $request->validate([
             'decisao'             => 'required|in:usar_existente,criar_nova',
             'empresa_existente_id' => 'required_if:decisao,usar_existente|nullable|exists:empresas,id',
+            'evento_id'           => 'nullable|exists:eventos,id',
         ]);
 
         $temp = session('importacao_temp');
@@ -130,6 +133,10 @@ class ImportacaoController extends Controller
             }
         } catch (\Exception $e) {
             return response()->json(['erro' => 'Erro ao processar empresa: ' . $e->getMessage()], 422);
+        }
+
+        if ($request->evento_id) {
+            $empresa->eventos()->syncWithoutDetaching([$request->evento_id]);
         }
 
         // ── Importa funcionários ────────────────────────────────────

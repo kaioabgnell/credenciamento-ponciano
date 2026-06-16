@@ -40,6 +40,11 @@ class Empresa extends Model
         return $this->hasMany(HistoricoEmpresa::class, 'empresa_id')->orderByDesc('created_at');
     }
 
+    public function eventos()
+    {
+        return $this->belongsToMany(Evento::class, 'empresa_evento');
+    }
+
     // SCOPES
     public function scopeAtivas($query)
     {

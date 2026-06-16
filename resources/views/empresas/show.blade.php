@@ -92,6 +92,27 @@
 
 </div>
 
+{{-- Eventos vinculados --}}
+@if($empresa->eventos->isNotEmpty())
+<div class="card mt-24">
+  <div class="card-header">
+    <div class="card-title">Eventos Vinculados ({{ $empresa->eventos->count() }})</div>
+    <a href="{{ route('empresas.edit', $empresa) }}" class="btn btn-sm btn-secondary">Gerenciar</a>
+  </div>
+  <div style="display:flex; flex-wrap:wrap; gap:10px; padding:4px 0">
+    @foreach($empresa->eventos->sortByDesc('data_inicio') as $evento)
+    <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--cinza-200); border-radius:8px; background:var(--cinza-50, #fafafa); min-width:220px">
+      <div>
+        <div style="font-weight:600; font-size:13.5px; color:var(--cinza-800)">{{ $evento->nome }}</div>
+        <div style="font-size:12px; color:var(--cinza-500); margin-top:2px">{{ $evento->periodo_formatado }}</div>
+      </div>
+      <div style="margin-left:auto">{!! $evento->status_badge !!}</div>
+    </div>
+    @endforeach
+  </div>
+</div>
+@endif
+
 {{-- Funcionários da empresa --}}
 <div class="card mt-24">
   <div class="card-header">

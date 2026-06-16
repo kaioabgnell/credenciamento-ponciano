@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Empresa;
+use App\Models\Evento;
 use App\Models\HistoricoEmpresa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,8 @@ class EmpresaController extends Controller
 
     public function create()
     {
-        return view('empresas.form', ['empresa' => new Empresa(), 'modo' => 'criar']);
+        $eventos = Evento::ativos()->orderByDesc('data_inicio')->get();
+        return view('empresas.form', ['empresa' => new Empresa(), 'modo' => 'criar', 'eventos' => $eventos]);
     }
 
     public function store(Request $request)
@@ -44,6 +46,7 @@ class EmpresaController extends Controller
         ], $this->mensagens());
 
         $empresa = Empresa::create($dados);
+        $empresa->eventos()->sync($request->input('evento_ids', []));
 
         return redirect()->route('empresas.show', $empresa)
                          ->with('success', "Empresa \"{$empresa->nome}\" cadastrada com sucesso!");
@@ -51,7 +54,7 @@ class EmpresaController extends Controller
 
     public function show(Empresa $empresa)
     {
-        $empresa->load(['funcionariosAtivos', 'historico.usuario']);
+        $empresa->load(['funcionariosAtivos', 'historico.usuario', 'eventos']);
         $pontos_recentes = $empresa->pontos()
                                    ->with('funcionario')
                                    ->whereDate('data', today())
@@ -62,7 +65,8 @@ class EmpresaController extends Controller
 
     public function edit(Empresa $empresa)
     {
-        return view('empresas.form', compact('empresa') + ['modo' => 'editar']);
+        $eventos = Evento::ativos()->orderByDesc('data_inicio')->get();
+        return view('empresas.form', compact('empresa', 'eventos') + ['modo' => 'editar']);
     }
 
     public function update(Request $request, Empresa $empresa)
@@ -91,6 +95,7 @@ class EmpresaController extends Controller
         }
 
         $empresa->update($dados);
+        $empresa->eventos()->sync($request->input('evento_ids', []));
 
         return redirect()->route('empresas.show', $empresa)
                          ->with('success', "Empresa atualizada com sucesso!");

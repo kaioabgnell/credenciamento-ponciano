@@ -279,8 +279,42 @@ const _errosPorId = {
       </div>
     </div>
 
-    {{-- STEP 3: Confirmação --}}
+    {{-- STEP 3: Seleção de Evento --}}
     <div class="imp-step" id="imp-step-3">
+      <div style="font-size:17px; font-weight:700; color:var(--cinza-900); margin-bottom:4px">📅 Vincular ao Evento</div>
+      <div style="font-size:13px; color:var(--cinza-500); margin-bottom:18px">
+        Selecione o evento em que esta empresa irá trabalhar. Você pode pular esta etapa.
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:20px; max-height:280px; overflow-y:auto">
+        @forelse($eventos as $evento)
+        <button type="button"
+                class="decisao-btn evento-opcao"
+                data-id="{{ $evento->id }}"
+                data-nome="{{ addslashes($evento->nome) }}"
+                onclick="selecionarEvento({{ $evento->id }}, '{{ addslashes($evento->nome) }}')">
+          <span style="font-size:22px">📅</span>
+          <div style="flex:1; text-align:left">
+            <div style="font-size:14px; font-weight:700">{{ $evento->nome }}</div>
+            <div style="font-size:12px; color:var(--cinza-500); font-weight:400; margin-top:2px">{{ $evento->periodo_formatado }}</div>
+          </div>
+          <div>{!! $evento->status_badge !!}</div>
+        </button>
+        @empty
+        <div style="text-align:center; padding:28px; color:var(--cinza-400); font-size:13px">
+          Nenhum evento ativo encontrado.
+        </div>
+        @endforelse
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end">
+        <button type="button" id="btn-voltar-evento" class="btn btn-secondary">← Voltar</button>
+        <button type="button" id="btn-continuar-evento" class="btn btn-primary">Continuar →</button>
+      </div>
+    </div>
+
+    {{-- STEP 4: Confirmação --}}
+    <div class="imp-step" id="imp-step-4">
       <div style="font-size:17px; font-weight:700; color:var(--cinza-900); margin-bottom:20px">✅ Confirmar Importação</div>
 
       <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:24px">
@@ -292,20 +326,25 @@ const _errosPorId = {
           <span style="color:var(--cinza-500); font-weight:600">Funcionários a importar</span>
           <span style="font-weight:700; color:var(--azul-primario); font-size:16px" id="preview-total-func">0</span>
         </div>
+        <div id="preview-evento-row"
+             style="display:none; justify-content:space-between; padding:10px 14px; background:var(--cinza-100); border-radius:8px; font-size:13px">
+          <span style="color:var(--cinza-500); font-weight:600">Evento</span>
+          <span style="font-weight:700; color:var(--azul-primario)" id="preview-evento-nome">—</span>
+        </div>
       </div>
 
-      <div id="imp-erro-step3"
+      <div id="imp-erro-step4"
            style="display:none; margin-bottom:12px; padding:10px 14px; background:var(--vermelho-light); border:1px solid var(--vermelho); border-radius:8px; font-size:13px; color:var(--vermelho); font-weight:500">
       </div>
 
       <div style="display:flex; gap:10px; justify-content:flex-end">
-        <button type="button" onclick="fecharModalImportacao()" class="btn btn-secondary">Cancelar</button>
+        <button type="button" onclick="irParaStep(3)" class="btn btn-secondary">← Voltar</button>
         <button type="button" id="btn-processar" class="btn btn-primary">Confirmar e Importar ✓</button>
       </div>
     </div>
 
-    {{-- STEP 4: Resultado --}}
-    <div class="imp-step" id="imp-step-4">
+    {{-- STEP 5: Resultado --}}
+    <div class="imp-step" id="imp-step-5">
       <div style="font-size:17px; font-weight:700; color:var(--cinza-900); margin-bottom:20px">📊 Resultado da Importação</div>
 
       <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px">
@@ -320,6 +359,11 @@ const _errosPorId = {
         <div style="display:flex; justify-content:space-between; padding:10px 14px; background:var(--cinza-100); border-radius:8px; font-size:13px">
           <span style="color:var(--cinza-500); font-weight:600">⚠ Registros com erro</span>
           <span style="font-weight:700; color:var(--vermelho)" id="res-erros">0</span>
+        </div>
+        <div id="res-evento-row"
+             style="display:none; justify-content:space-between; padding:10px 14px; background:#eff6ff; border:1px solid #93c5fd; border-radius:8px; font-size:13px">
+          <span style="color:#1d4ed8; font-weight:600">📅 Evento vinculado</span>
+          <span style="font-weight:700; color:#1d4ed8" id="res-evento-nome">—</span>
         </div>
       </div>
 
@@ -353,6 +397,8 @@ let _arquivoSelecionado = null;
 let _parsedData         = null;
 let _decisao            = null;
 let _empresaExistenteId = null;
+let _eventoId           = null;
+let _eventoNome         = null;
 
 // ── Modal ─────────────────────────────────────────────────────────
 window.abrirModalUpload = function () {
@@ -370,6 +416,8 @@ function resetarModal() {
   _parsedData         = null;
   _decisao            = null;
   _empresaExistenteId = null;
+  _eventoId           = null;
+  _eventoNome         = null;
   $('#input-arquivo-imp').val('');
   $('#nome-arquivo-texto').text('');
   $('#nome-arquivo-selecionado').hide();
@@ -481,7 +529,29 @@ window.selecionarDecisao = function (decisao) {
 
 $('#btn-confirmar-decisao').on('click', function () {
   if (!_decisao) return;
-  irParaStep(3);
+  irParaStep(3); // vai para seleção de evento
+});
+
+// ── Seleção de evento ─────────────────────────────────────────────
+window.selecionarEvento = function (id, nome) {
+  _eventoId   = id;
+  _eventoNome = nome;
+  $('.evento-opcao').removeClass('selecionado');
+  $('.evento-opcao[data-id="' + id + '"]').addClass('selecionado');
+};
+
+$('#btn-voltar-evento').on('click', function () {
+  irParaStep(_parsedData && _parsedData.empresa_duplicada ? 2 : 1);
+});
+
+$('#btn-continuar-evento').on('click', function () {
+  if (_eventoId) {
+    $('#preview-evento-nome').text(_eventoNome);
+    $('#preview-evento-row').css('display', 'flex');
+  } else {
+    $('#preview-evento-row').hide();
+  }
+  irParaStep(4);
 });
 
 // ── Processar importação ──────────────────────────────────────────
@@ -495,14 +565,24 @@ $('#btn-processar').on('click', function () {
     postData.empresa_existente_id = _empresaExistenteId;
   }
 
+  if (_eventoId) {
+    postData.evento_id = _eventoId;
+  }
+
   const $btn = $(this).prop('disabled', true).text('Importando...');
 
   $.post('{{ route("importacoes.processar") }}', postData)
     .done(function (res) {
-      // Exibe resultados
       $('#res-importados').text(res.importados);
       $('#res-erros').text(res.com_erros);
       $('#res-empresa').text(res.empresa.nome);
+
+      if (_eventoId) {
+        $('#res-evento-nome').text(_eventoNome);
+        $('#res-evento-row').css('display', 'flex');
+      } else {
+        $('#res-evento-row').hide();
+      }
 
       if (res.erros && res.erros.length > 0) {
         const lista = res.erros.map(e => `<li>${e}</li>`).join('');
@@ -512,10 +592,10 @@ $('#btn-processar').on('click', function () {
         $('#res-bloco-erros').hide();
       }
 
-      irParaStep(4);
+      irParaStep(5);
     })
     .fail(function (xhr) {
-      $('#imp-erro-step3').text(xhr.responseJSON?.erro || 'Erro ao processar a importação.').show();
+      $('#imp-erro-step4').text(xhr.responseJSON?.erro || 'Erro ao processar a importação.').show();
       $btn.prop('disabled', false).text('Confirmar e Importar ✓');
     })
     .always(function () {});

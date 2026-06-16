@@ -26,6 +26,11 @@ class Evento extends Model
         return $this->hasMany(Ponto::class, 'evento_id');
     }
 
+    public function empresas()
+    {
+        return $this->belongsToMany(Empresa::class, 'empresa_evento');
+    }
+
     // SCOPES
     public function scopeAtivos($query)
     {
